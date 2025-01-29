@@ -4,26 +4,41 @@ const applyEffectButton = document.getElementById("applyEffect");
 const downloadBtn = document.getElementById("downloadBtn");
 const audioPlayer = document.getElementById("audioPlayer");
 
+// Получаем слайдеры и значения
+const distortionAmount = document.getElementById("distortionAmount");
+const gainAmount = document.getElementById("gainAmount");
+const distortionValue = document.getElementById("distortionValue");
+const gainValue = document.getElementById("gainValue");
+
 // Создаем контекст аудио
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioElement = null;
 let distortion = null;
+let gainNode = null;
 let processedAudioBuffer = null;
 
+// Обновляем значения при изменении слайдера
+distortionAmount.addEventListener("input", () => {
+    distortionValue.textContent = distortionAmount.value;
+});
+
+gainAmount.addEventListener("input", () => {
+    gainValue.textContent = gainAmount.value;
+});
+
 // Функция для создания эффекта distortion
-function createDistortion() {
+function createDistortion(amount) {
     distortion = audioContext.createWaveShaper();
-    distortion.curve = makeDistortionCurve(1500);  // Увеличим уровень искажений
+    distortion.curve = makeDistortionCurve(amount);  // Сила distortion будет зависеть от значения слайдера
     distortion.oversample = '4x';
 }
 
 // Функция для создания кривой distortion
 function makeDistortionCurve(amount) {
     const curve = new Float32Array(44100);
-    const deg = Math.PI / 2;
     for (let i = 0; i < 44100; i++) {
         curve[i] = (i / 44100) * 2 - 1;
-        curve[i] = (3 + amount) * curve[i] / (3 + amount * Math.abs(curve[i]));
+        curve[i] = Math.pow(curve[i], amount);  // Сила искажения зависит от значения слайдера
     }
     return curve;
 }
@@ -42,20 +57,28 @@ fileInput.addEventListener("change", function() {
 applyEffectButton.addEventListener("click", function() {
     if (!audioElement) return;
 
-    // Создаем источник аудио
     const audioSource = audioContext.createMediaElementSource(audioElement);
 
-    // Создаем distortion эффект
-    createDistortion();
+    // Получаем значения слайдеров
+    const distortionValue = distortionAmount.value;
+    const gainValue = gainAmount.value;
 
-    // Подключаем цепочку: источник -> distortion -> выход в колонки
-    audioSource.connect(distortion);
+    // Создаем усилитель (GainNode)
+    gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);  // Усиливаем сигнал
+
+    // Создаем distortion эффект с параметрами слайдера
+    createDistortion(distortionValue);
+
+    // Подключаем цепочку: источник -> усилитель -> distortion -> выход в колонки
+    audioSource.connect(gainNode);
+    gainNode.connect(distortion);
     distortion.connect(audioContext.destination);
 
     // Воспроизводим аудио
     audioElement.play();
 
-    // Добавляем возможность скачать обработанный файл
+    // После применения эффекта — даём возможность скачать файл
     const bufferSource = audioContext.createBufferSource();
     const xhr = new XMLHttpRequest();
     xhr.open("GET", audioElement.src, true);
@@ -64,8 +87,10 @@ applyEffectButton.addEventListener("click", function() {
         audioContext.decodeAudioData(xhr.response, function(buffer) {
             processedAudioBuffer = buffer;
 
+            // Подключаем обработанный аудио-источник к цепочке
             bufferSource.buffer = processedAudioBuffer;
-            bufferSource.connect(distortion);
+            bufferSource.connect(gainNode);
+            gainNode.connect(distortion);
             distortion.connect(audioContext.destination);
 
             // Показать кнопку для скачивания
