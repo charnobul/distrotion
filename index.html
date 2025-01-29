@@ -4,10 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Distortion Effect</title>
+    <style>
+        .control {
+            margin: 10px 0;
+        }
+        .label {
+            display: inline-block;
+            width: 150px;
+        }
+    </style>
 </head>
 <body>
     <h1>Гитарный эффект Distortion для аудио</h1>
+
     <input type="file" id="fileInput" accept="audio/*">
+    <br>
+
+    <!-- Управление эффектами -->
+    <div class="control">
+        <label for="distortionAmount" class="label">Сила Distortion:</label>
+        <input type="range" id="distortionAmount" min="1" max="1000" value="1000">
+        <span id="distortionValue">1000</span>
+    </div>
+    <div class="control">
+        <label for="gainAmount" class="label">Усиление:</label>
+        <input type="range" id="gainAmount" min="1" max="100" value="10">
+        <span id="gainValue">10</span>
+    </div>
+
     <button id="applyEffect">Применить Distortion</button>
     <button id="downloadBtn" style="display:none;">Скачать обработанный файл</button>
     <br>
