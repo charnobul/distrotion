@@ -26,19 +26,22 @@ gainAmount.addEventListener("input", () => {
     gainValue.textContent = gainAmount.value;
 });
 
-// Функция для создания эффекта distortion
+// Функция для создания эффекта distortion с правильным клиппингом
 function createDistortion(amount) {
     distortion = audioContext.createWaveShaper();
     distortion.curve = makeDistortionCurve(amount);  // Сила distortion будет зависеть от значения слайдера
     distortion.oversample = '4x';
 }
 
-// Функция для создания кривой distortion
+// Функция для создания кривой distortion (клиппинг)
 function makeDistortionCurve(amount) {
     const curve = new Float32Array(44100);
+    const clippingLevel = Math.pow(2, amount / 10);  // Более высокая степень для сильного клиппинга
     for (let i = 0; i < 44100; i++) {
-        curve[i] = (i / 44100) * 2 - 1;
-        curve[i] = Math.pow(curve[i], amount);  // Сила искажения зависит от значения слайдера
+        let x = (i / 44100) * 2 - 1; // Обычная волна от -1 до 1
+        if (x > clippingLevel) x = clippingLevel;
+        if (x < -clippingLevel) x = -clippingLevel;
+        curve[i] = x;
     }
     return curve;
 }
